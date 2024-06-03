@@ -21,7 +21,7 @@ namespace InventoryHub.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<ProductDto>>> GetAll()
+        public async Task<ActionResult<IEnumerable<ProductDto>>> GetAllAsync()
         {
             var products = await _productRepository.GetAllAsync();
             var productDtos = _mapper.Map<IEnumerable<ProductDto>>(products);
@@ -29,7 +29,7 @@ namespace InventoryHub.Controllers
         }
 
         [HttpGet("{id}")]
-        public async Task<ActionResult<ProductDto>> GetById(Guid id)
+        public async Task<ActionResult<ProductDto>> GetByIdAsync(Guid id)
         {
             var product = await _productRepository.GetByIdAsync(id);
             var productDto = _mapper.Map<ProductDto>(product);
@@ -37,16 +37,16 @@ namespace InventoryHub.Controllers
         }
 
         [HttpPost]
-        public async Task<ActionResult<ProductDto>> Create([FromBody] CreateProductDto createProductDto)
+        public async Task<ActionResult<ProductDto>> CreateAsync([FromBody] CreateProductDto createProductDto)
         {
             var product = _mapper.Map<Product>(createProductDto);
             await _productRepository.AddAsync(product);
             var productDto = _mapper.Map<ProductDto>(product);
-            return CreatedAtAction(nameof(GetById), new { id = product.Id }, productDto);
+            return CreatedAtAction(nameof(GetByIdAsync), new { id = product.Id }, productDto);
         }
 
         [HttpPatch("{id}")]
-        public async Task<ActionResult<ProductDto>> Update(Guid id, [FromBody] PatchProductDto patchProductDto)
+        public async Task<ActionResult<ProductDto>> UpdateAsync(Guid id, [FromBody] PatchProductDto patchProductDto)
         {
             var product = await _productRepository.PatchProductAsync(id, patchProductDto.Name);
             var productDto = _mapper.Map<ProductDto>(product);
@@ -54,7 +54,7 @@ namespace InventoryHub.Controllers
         }
 
         [HttpDelete("{id}")]
-        public async Task<ActionResult<ProductDto>> Delete(Guid id)
+        public async Task<ActionResult<ProductDto>> DeleteAsync(Guid id)
         {
             var product = await _productRepository.DeleteAsync(id);
             var productDto = _mapper.Map<ProductDto>(product);
@@ -63,7 +63,7 @@ namespace InventoryHub.Controllers
 
 
         [HttpPatch("{id}/adjust")]
-        public async Task<ActionResult<ProductDto>> AdjustQuantity(Guid id, [FromBody] int adjustment)
+        public async Task<ActionResult<ProductDto>> AdjustQuantityAsync(Guid id, [FromBody] int adjustment)
         {
             var (product, isUpdated) = await _productRepository.AdjustQuantityAsync(id, adjustment);
             var productDto = _mapper.Map<ProductDto>(product);
