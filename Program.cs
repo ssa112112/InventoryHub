@@ -1,12 +1,14 @@
 using InventoryHub.AutoMapper;
 using InventoryHub.Repositories;
+using InventoryHub.SQL;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 
-builder.Services.AddSingleton<IProductRepository, InMemoryProductRepository>();
+builder.Services.AddScoped<IProductRepository, SQLProductRepository>();
 
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
@@ -14,6 +16,11 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 builder.Services.AddAutoMapper(typeof(MappingProfile));
+
+builder.Services.AddDbContextPool<InventoryHubDBContext>(options =>
+{
+    options.UseSqlServer(builder.Configuration.GetConnectionString("InvenotyHubConnectionString"));
+});
 
 var app = builder.Build();
 

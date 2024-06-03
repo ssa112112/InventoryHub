@@ -28,7 +28,7 @@ namespace InventoryHub.Controllers
             return Ok(productDtos);
         }
 
-        [HttpGet("{id}")]
+        [HttpGet("{id}", Name = "GetProductById")]
         public async Task<ActionResult<ProductDto>> GetByIdAsync(Guid id)
         {
             var product = await _productRepository.GetByIdAsync(id);
@@ -40,9 +40,9 @@ namespace InventoryHub.Controllers
         public async Task<ActionResult<ProductDto>> CreateAsync([FromBody] CreateProductDto createProductDto)
         {
             var product = _mapper.Map<Product>(createProductDto);
-            await _productRepository.AddAsync(product);
+            product = await _productRepository.AddAsync(product);
             var productDto = _mapper.Map<ProductDto>(product);
-            return CreatedAtAction(nameof(GetByIdAsync), new { id = product.Id }, productDto);
+            return CreatedAtRoute("GetProductById", new { id = product.Id }, productDto);
         }
 
         [HttpPatch("{id}")]

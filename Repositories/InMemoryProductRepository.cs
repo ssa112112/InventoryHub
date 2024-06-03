@@ -7,7 +7,7 @@ namespace InventoryHub.Repositories
 {
     public class InMemoryProductRepository : IProductRepository
     {
-        private readonly ConcurrentDictionary<Guid, Product> _products = new();
+        private readonly static ConcurrentDictionary<Guid, Product> _products = new();
 
         public Task<IEnumerable<Product>> GetAllAsync()
         {
