@@ -44,20 +44,12 @@ namespace InventoryHub.Repositories
 
         public Task<(Product product, bool isUpdated)> AdjustQuantityAsync(Guid id, int adjustment)
         {
-            if (_products.TryGetValue(id, out var product) == false)
-            {
-                throw new ProductNotFoundException(id);
-            }
+            return Task.FromResult(AdjustQuantityInner(id, adjustment));
+        }
 
-            var newQuantity = product.Quantity + adjustment;
-
-            if (newQuantity < 0)
-            {
-                return Task.FromResult((product, false));
-            }
-
-            product.Quantity = newQuantity;
-            return Task.FromResult((product, true));
+        public Task<bool> AdjustQuantityFastAsync(Guid id, int adjustment)
+        {
+            return Task.FromResult(AdjustQuantityInner(id, adjustment).isUpdated);
         }
 
         public Task<Product> PatchProductAsync(Guid id, string newName)
@@ -69,6 +61,25 @@ namespace InventoryHub.Repositories
 
             product.Name = newName;
             return Task.FromResult(product);
+        }
+
+
+        private (Product product, bool isUpdated) AdjustQuantityInner(Guid id, int adjustment)
+        {
+            if (_products.TryGetValue(id, out var product) == false)
+            {
+                throw new ProductNotFoundException(id);
+            }
+
+            var newQuantity = product.Quantity + adjustment;
+
+            if (newQuantity < 0)
+            {
+                return (product, false);
+            }
+
+            product.Quantity = newQuantity;
+            return (product, true);
         }
     }
 }

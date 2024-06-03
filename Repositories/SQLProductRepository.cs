@@ -1,7 +1,9 @@
 ﻿using InventoryHub.Exceptions;
 using InventoryHub.Models;
 using InventoryHub.SQL;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using System.Data;
 
 namespace InventoryHub.Repositories
 {
@@ -39,6 +41,72 @@ namespace InventoryHub.Repositories
             _dbContext.Products.Remove(product);
             await _dbContext.SaveChangesAsync();
             return product;
+        }
+
+        /// <summary>
+        /// Оптимизация 1: один SQL запрос вместо двух
+        /// Оптимизация 2: не работаем с лишними полями Product
+        /// </summary>
+        /// <param name="id"></param>
+        /// <param name="adjustment"></param>
+        /// <returns></returns>
+        /// <exception cref="ProductNotFoundException"></exception>
+        /// <exception cref="Exception"></exception>
+        public async Task<bool> AdjustQuantityFastAsync(Guid id, int adjustment)
+        {
+            var statusParam = new SqlParameter
+            {
+                ParameterName = "@status",
+                SqlDbType = SqlDbType.Int,
+                Direction = ParameterDirection.Output
+            };
+
+            var productIdParam = new SqlParameter("@productId", id);
+            var adjustmentParam = new SqlParameter("@adjustment", adjustment);
+
+            await _dbContext.Database.ExecuteSqlRawAsync(@"
+            DECLARE @currentQuantity INT;
+            DECLARE @newQuantity INT;
+
+            -- Выбираем текущее Quantity
+            SELECT @currentQuantity = Quantity
+            FROM Products
+            WHERE Id = @productId;
+
+            -- Возвращаем статус -1 есть продукт не найден
+            IF @currentQuantity IS NULL
+            BEGIN
+                SET @status = -1;
+                RETURN;
+            END
+
+            -- Считаем новое Quantity
+            SET @newQuantity = @currentQuantity + @adjustment;
+
+            -- Если новое Quantity >= 0, то обновляем продукт м возвращаем статус 0
+            IF @newQuantity >= 0
+            BEGIN
+                UPDATE Products
+                SET Quantity = @newQuantity
+                WHERE Id = @productId;
+                SET @status = 0;
+            END
+            -- Если новое Quantity < 0 возвращаем статус -2
+            ELSE
+            BEGIN
+                SET @status = -2;
+            END
+        ", productIdParam, adjustmentParam, statusParam);
+
+            var status = (int)statusParam.Value;
+
+            return status switch
+            {
+                -2 => false,
+                -1 => throw new ProductNotFoundException(id),
+                0 => true,
+                _ => throw new Exception($"Unexpected status. Status = {status}"),
+            };
         }
 
         public async Task<(Product product, bool isUpdated)> AdjustQuantityAsync(Guid id, int adjustment)

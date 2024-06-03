@@ -11,6 +11,7 @@ namespace InventoryHub.Controllers
     [Route("api/[controller]")]
     public class ProductsController : ControllerBase
     {
+        private const string INSUFFICIENT_STOCK_ERROR = "Insufficient stock. The operation would result in negative quantity.";
         private readonly IProductRepository _productRepository;
         private readonly IMapper _mapper;
 
@@ -61,6 +62,24 @@ namespace InventoryHub.Controllers
             return Ok(productDto);
         }
 
+        [HttpPatch("{id}/fastAdjust")]
+        public async Task<ActionResult<ProductDto>> AdjustQuantityFastAsync(Guid id, [FromBody] int adjustment)
+        {
+            var isUpdated = await _productRepository.AdjustQuantityFastAsync(id, adjustment);
+
+            if (isUpdated == false)
+            {
+                var errorResponse = new
+                {
+                    error = INSUFFICIENT_STOCK_ERROR,
+                };
+
+                return Conflict(errorResponse);
+            }
+
+            return Ok();
+        }
+
 
         [HttpPatch("{id}/adjust")]
         public async Task<ActionResult<ProductDto>> AdjustQuantityAsync(Guid id, [FromBody] int adjustment)
@@ -72,7 +91,7 @@ namespace InventoryHub.Controllers
             {
                 var errorResponse = new
                 {
-                    error = "Insufficient stock. The operation would result in negative quantity.",
+                    error = INSUFFICIENT_STOCK_ERROR,
                     product = productDto
                 };
 
