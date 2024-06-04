@@ -19,7 +19,7 @@ builder.Services.AddAutoMapper(typeof(MappingProfile));
 
 builder.Services.AddDbContextPool<InventoryHubDBContext>(options =>
 {
-    options.UseSqlServer(builder.Configuration.GetConnectionString("InvenotyHubConnectionString"));
+    options.UseSqlServer(builder.Configuration.GetConnectionString("InventoryHubConnectionString"));
 });
 
 var app = builder.Build();
