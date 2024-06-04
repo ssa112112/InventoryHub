@@ -4,6 +4,7 @@ namespace InventoryHub.Models
 {
     public class Product
     {
+        [Key]
         public Guid Id { get; set; }
 
         //Todo: вынести 3 в конфиг

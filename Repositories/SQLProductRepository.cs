@@ -3,6 +3,7 @@ using InventoryHub.Models;
 using InventoryHub.SQL;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using Polly;
 using System.Data;
 
 namespace InventoryHub.Repositories
@@ -10,10 +11,12 @@ namespace InventoryHub.Repositories
     public class SQLProductRepository : IProductRepository
     {
         private readonly InventoryHubDBContext _dbContext;
+        private readonly ILogger<SQLProductRepository> _logger;
 
-        public SQLProductRepository(InventoryHubDBContext dbContext)
+        public SQLProductRepository(InventoryHubDBContext dbContext, ILogger<SQLProductRepository> logger)
         {
             _dbContext = dbContext;
+            _logger = logger;
         }
 
         public async Task<IEnumerable<Product>> GetAllAsync()
@@ -111,18 +114,53 @@ namespace InventoryHub.Repositories
 
         public async Task<(Product product, bool isUpdated)> AdjustQuantityAsync(Guid id, int adjustment)
         {
-            var product = await _dbContext.Products.FindAsync(id) ?? throw new ProductNotFoundException(id);
-            var newQuantity = product.Quantity + adjustment;
+            var policy = Policy
+                .Handle<SqlException>()
+                .WaitAndRetryAsync(3, retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)), (exception, timeSpan, retryCount, context) =>
+                {
+                    _logger.LogWarning(exception, "Exception caught, retrying...");
+                });
 
-            if (newQuantity < 0)
+            return await policy.ExecuteAsync(async () =>
             {
-                return (product, false);
-            }
+                using var transaction = await _dbContext.Database.BeginTransactionAsync(IsolationLevel.ReadCommitted);
+                try
+                {
 
-            product.Quantity = newQuantity;
-            _dbContext.Products.Update(product);
-            await _dbContext.SaveChangesAsync();
-            return (product, true);
+#pragma warning disable EF1001 // Игнорируем "The query uses the 'First'/'FirstOrDefault' operator without 'OrderBy' and filter operators", т.к. делаем выборку по точному совпадению PrimaryKey
+                    // Читаем и блокируем строку
+                    var product = await _dbContext.Products
+                        .FromSqlInterpolated($"SELECT * FROM Products WITH (ROWLOCK, UPDLOCK) WHERE Id = {id}")
+                        .FirstOrDefaultAsync();
+#pragma warning restore EF1001 
+
+                    if (product == null)
+                    {
+                        throw new ProductNotFoundException(id);
+                    }
+
+                    int newQuantity = product.Quantity + adjustment;
+
+                    if (newQuantity < 0)
+                    {
+                        await transaction.RollbackAsync();
+                        return (product, false);
+                    }
+
+                    product.Quantity = newQuantity;
+
+                    await _dbContext.SaveChangesAsync();
+                    await transaction.CommitAsync();
+
+                    return (product, true);
+
+                }
+                catch (Exception)
+                {
+                    await transaction.RollbackAsync();
+                    throw;
+                }
+            });
         }
 
         public async Task<Product> PatchProductAsync(Guid id, string newName)
