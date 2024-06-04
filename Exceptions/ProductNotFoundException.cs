@@ -11,16 +11,5 @@
             ProductId = id;
         }
 
-        public ProductNotFoundException(Guid id, string message)
-            : base(message)
-        {
-            ProductId = id;
-        }
-
-        public ProductNotFoundException(Guid id, string message, Exception innerException)
-            : base(message, innerException)
-        {
-            ProductId = id;
-        }
     }
 }
