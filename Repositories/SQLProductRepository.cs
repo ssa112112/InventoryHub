@@ -185,7 +185,6 @@ namespace InventoryHub.Repositories
         {
             var product = await _dbContext.Products.FindAsync(id) ?? throw new ProductNotFoundException(id);
             product.Name = newName;
-            _dbContext.Products.Update(product);
             await _dbContext.SaveChangesAsync();
             return product;
         }
