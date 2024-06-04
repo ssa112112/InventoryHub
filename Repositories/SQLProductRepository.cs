@@ -90,7 +90,7 @@ namespace InventoryHub.Repositories
             WITH (ROWLOCK, UPDLOCK)
             WHERE Id = @productId;
 
-            -- Возвращаем статус -1 есть продукт не найден
+            -- Возвращаем статус -1 если продукт не найден
             IF @currentQuantity IS NULL
             BEGIN
                 SET @status = -1;
@@ -101,7 +101,7 @@ namespace InventoryHub.Repositories
             -- Считаем новое Quantity
             SET @newQuantity = @currentQuantity + @adjustment;
 
-            -- Если новое Quantity >= 0, то обновляем продукт м возвращаем статус 0
+            -- Если новое Quantity >= 0, то обновляем продукт и возвращаем статус 0
             IF @newQuantity >= 0
             BEGIN
                 UPDATE Products
