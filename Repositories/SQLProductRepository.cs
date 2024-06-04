@@ -141,7 +141,7 @@ namespace InventoryHub.Repositories
 
             return await policy.ExecuteAsync(async () =>
             {
-                using var transaction = await _dbContext.Database.BeginTransactionAsync(IsolationLevel.ReadCommitted);
+                var transaction = await _dbContext.Database.BeginTransactionAsync(IsolationLevel.ReadCommitted);
                 try
                 {
 
@@ -177,6 +177,10 @@ namespace InventoryHub.Repositories
                 {
                     await transaction.RollbackAsync();
                     throw;
+                }
+                finally
+                {
+                    await transaction.DisposeAsync();
                 }
             });
         }
